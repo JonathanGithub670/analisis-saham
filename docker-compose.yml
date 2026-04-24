@@ -44,7 +44,8 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-stockpulse}:${POSTGRES_PASSWORD:-stockpulse_secret}@db:5432/${POSTGRES_DB:-stockpulse}
       REDIS_URL: redis://redis:6379
       AI_SERVICE_URL: http://ai-service:8000
-      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-demo}
+      JWT_SECRET: ${JWT_SECRET:-stockpulse-super-secret-jwt-key-change-in-production}
       BACKEND_HOST: 0.0.0.0
       BACKEND_PORT: 3001
     depends_on:
