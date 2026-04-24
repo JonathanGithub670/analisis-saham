@@ -73,6 +73,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://72.60.43.25:3001
     container_name: stockpulse-frontend
     restart: unless-stopped
     ports:
