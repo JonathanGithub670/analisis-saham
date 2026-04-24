@@ -1,0 +1,35 @@
+# Environment
+.env
+.env.local
+
+# Rust
+/target/
+backend/target/
+
+# Node
+node_modules/
+frontend/.next/
+frontend/out/
+
+# Python
+__pycache__/
+*.pyc
+ai-service/venv/
+ai-service/model/*.pkl
+ai-service/model/*.joblib
+
+# Docker
+.docker/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
