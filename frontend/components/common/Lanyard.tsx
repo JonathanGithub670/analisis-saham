@@ -73,12 +73,12 @@ export default function Lanyard({ position = [0, 0, 30], gravity = [0, -40, 0], 
 function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false, cardImage }: {
   maxSpeed?: number; minSpeed?: number; isMobile?: boolean; cardImage?: string;
 }) {
-  const band = useRef<any>();
-  const fixed = useRef<any>();
-  const j1 = useRef<any>();
-  const j2 = useRef<any>();
-  const j3 = useRef<any>();
-  const card = useRef<any>();
+  const band = useRef<any>(null);
+  const fixed = useRef<any>(null);
+  const j1 = useRef<any>(null);
+  const j2 = useRef<any>(null);
+  const j3 = useRef<any>(null);
+  const card = useRef<any>(null);
 
   const vec = new THREE.Vector3(),
     ang = new THREE.Vector3(),
