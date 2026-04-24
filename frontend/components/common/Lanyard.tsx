@@ -85,7 +85,7 @@ function Band({ maxSpeed = 50, minSpeed = 0, isMobile = false, cardImage }: {
     rot = new THREE.Vector3(),
     dir = new THREE.Vector3();
 
-  const segmentProps = { type: 'dynamic' as const, canSleep: true, colliders: false, angularDamping: 4, linearDamping: 4 };
+  const segmentProps = { type: 'dynamic' as const, canSleep: true, colliders: false as const, angularDamping: 4, linearDamping: 4 };
 
   const { nodes, materials } = useGLTF('/card.glb') as any;
   const texture = useTexture('/lanyard.png');
