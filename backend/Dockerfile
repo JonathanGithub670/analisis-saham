@@ -13,14 +13,14 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release 2>/dev/null || true
 
 # Remove dummy build artifacts so cargo is forced to rebuild
-RUN rm -rf src target/release/stockpulse-backend target/release/deps/stockpulse_backend*
+RUN rm -rf src target/release/stockpulse-backend target/release/deps/stockpulse_backend* target/release/deps/seeder*
 
 # Copy actual source
 COPY src/ src/
 COPY migrations/ migrations/
 
-# Build
-RUN cargo build --release
+# Build backend and seeder
+RUN cargo build --release --bin stockpulse-backend --bin seeder
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y ca-certificates libssl3 && rm -rf /var/
 
 WORKDIR /app
 COPY --from=builder /app/target/release/stockpulse-backend /app/stockpulse-backend
+COPY --from=builder /app/target/release/seeder /app/seeder
 COPY --from=builder /app/migrations /app/migrations
 
 EXPOSE 3001
