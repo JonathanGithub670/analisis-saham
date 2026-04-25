@@ -12,6 +12,9 @@ COPY Cargo.toml Cargo.lock* ./
 RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release 2>/dev/null || true
 
+# Remove dummy build artifacts so cargo is forced to rebuild
+RUN rm -rf src target/release/stockpulse-backend target/release/deps/stockpulse_backend*
+
 # Copy actual source
 COPY src/ src/
 COPY migrations/ migrations/
