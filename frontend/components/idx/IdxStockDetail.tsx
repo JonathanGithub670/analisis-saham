@@ -6,6 +6,7 @@ import IdxStockChart from "./IdxStockChart";
 import IdxAIRecommendationPanel from "./IdxAIRecommendation";
 import IdxFairValue from "./IdxFairValue";
 import IdxStockChat from "./IdxStockChat";
+import AIInsightCard from "@/components/common/AIInsightCard";
 
 const RANGES = [
   { label: "1M", value: "1mo", interval: "1d" },
@@ -241,6 +242,12 @@ export default function IdxStockDetail({ symbol, onBack }: Props) {
 
       {/* Tab Content */}
       {activeTab === "overview" && (
+        <div className="space-y-6">
+          <AIInsightCard
+            title="Ringkasan AI"
+            symbol={symbol}
+            section="summary"
+          />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Trading Info */}
           <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
@@ -268,9 +275,16 @@ export default function IdxStockDetail({ symbol, onBack }: Props) {
             </div>
           </div>
         </div>
+        </div>
       )}
 
       {activeTab === "fundamental" && (
+        <div className="space-y-6">
+          <AIInsightCard
+            title="Analisis Fundamental AI"
+            symbol={symbol}
+            section="fundamental"
+          />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Financial Performance */}
           <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
@@ -319,24 +333,41 @@ export default function IdxStockDetail({ symbol, onBack }: Props) {
             </div>
           )}
         </div>
+        </div>
       )}
 
-      {activeTab === "fair-value" && <IdxFairValue quote={quote} />}
+      {activeTab === "fair-value" && (
+        <IdxFairValue quote={quote} symbol={symbol} section="fairValue" />
+      )}
 
       {activeTab === "ai-analysis" && (
-        <IdxAIRecommendationPanel symbol={symbol} currentPrice={quote.price} />
+        <IdxAIRecommendationPanel
+          symbol={symbol}
+          currentPrice={quote.price}
+          section="recommendation"
+        />
       )}
 
       {activeTab === "chat" && <IdxStockChat quote={quote} />}
 
       {activeTab === "profile" && (
-        <CompanyProfile quote={quote} code={code} />
+        <CompanyProfile quote={quote} code={code} symbol={symbol} section="profile" />
       )}
     </div>
   );
 }
 
-function CompanyProfile({ quote, code }: { quote: IdxStockQuote; code: string }) {
+function CompanyProfile({
+  quote,
+  code,
+  symbol,
+  section,
+}: {
+  quote: IdxStockQuote;
+  code: string;
+  symbol: string;
+  section: "profile";
+}) {
   const [expanded, setExpanded] = useState(false);
 
   const addressParts = [quote.address1, quote.city, quote.zip, quote.country].filter(
@@ -353,6 +384,11 @@ function CompanyProfile({ quote, code }: { quote: IdxStockQuote; code: string })
 
   return (
     <div className="space-y-6">
+      <AIInsightCard
+        title="Profil & Posisi Pasar AI"
+        symbol={symbol}
+        section={section}
+      />
       {/* Hero Card */}
       <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-brand-50/30 p-6 dark:border-gray-800 dark:from-white/[0.03] dark:to-brand-500/[0.05]">
         <div className="flex flex-col sm:flex-row sm:items-start gap-5">

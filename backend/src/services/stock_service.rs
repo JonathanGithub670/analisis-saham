@@ -8,12 +8,12 @@ use crate::state::AppState;
 pub struct StockService;
 
 impl StockService {
-    /// Search stocks with caching
+    /// Search stocks with in-memory caching
     pub async fn search(state: &AppState, query: &str) -> AppResult<Vec<StockSearchResult>> {
         let cache_key = CacheService::search_key(query);
 
-        // Check cache first
-        if let Some(cached) = CacheService::get(&state.redis, &cache_key).await? {
+        // Check cache first (60s TTL for real-time freshness)
+        if let Some(cached) = CacheService::get(&state.cache, &cache_key).await? {
             if let Ok(results) = serde_json::from_str(&cached) {
                 tracing::debug!("Cache hit for search: {}", query);
                 return Ok(results);
@@ -29,18 +29,18 @@ impl StockService {
 
         // Cache results
         if let Ok(json) = serde_json::to_string(&results) {
-            let _ = CacheService::set(&state.redis, &cache_key, &json).await;
+            let _ = CacheService::set(&state.cache, &cache_key, &json).await;
         }
 
         Ok(results)
     }
 
-    /// Get stock quote with caching
+    /// Get stock quote with in-memory caching
     pub async fn get_quote(state: &AppState, symbol: &str) -> AppResult<StockQuote> {
         let cache_key = CacheService::quote_key(symbol);
 
-        // Check cache
-        if let Some(cached) = CacheService::get(&state.redis, &cache_key).await? {
+        // Check cache (60s TTL)
+        if let Some(cached) = CacheService::get(&state.cache, &cache_key).await? {
             if let Ok(quote) = serde_json::from_str(&cached) {
                 tracing::debug!("Cache hit for quote: {}", symbol);
                 return Ok(quote);
@@ -56,13 +56,13 @@ impl StockService {
 
         // Cache
         if let Ok(json) = serde_json::to_string(&quote) {
-            let _ = CacheService::set(&state.redis, &cache_key, &json).await;
+            let _ = CacheService::set(&state.cache, &cache_key, &json).await;
         }
 
         Ok(quote)
     }
 
-    /// Get historical daily data with caching
+    /// Get historical daily data with in-memory caching (1h TTL)
     pub async fn get_history(
         state: &AppState,
         symbol: &str,
@@ -70,8 +70,8 @@ impl StockService {
     ) -> AppResult<Vec<OhlcvData>> {
         let cache_key = CacheService::history_key(symbol, interval);
 
-        // Check cache
-        if let Some(cached) = CacheService::get(&state.redis, &cache_key).await? {
+        // Check history cache (1h TTL — historical data rarely changes)
+        if let Some(cached) = CacheService::get_history(&state.history_cache, &cache_key).await? {
             if let Ok(data) = serde_json::from_str(&cached) {
                 tracing::debug!("Cache hit for history: {} {}", symbol, interval);
                 return Ok(data);
@@ -91,15 +91,9 @@ impl StockService {
             _ => client.get_daily(symbol, false).await?,
         };
 
-        // Cache with longer TTL for historical data
+        // Cache in history tier (1h TTL)
         if let Ok(json) = serde_json::to_string(&data) {
-            let _ = CacheService::set_with_ttl(
-                &state.redis,
-                &cache_key,
-                &json,
-                CacheService::history_ttl(),
-            )
-            .await;
+            let _ = CacheService::set_history(&state.history_cache, &cache_key, &json).await;
         }
 
         // Store in database for persistence
@@ -112,8 +106,8 @@ impl StockService {
     pub async fn get_indicators(state: &AppState, symbol: &str) -> AppResult<IndicatorResult> {
         let cache_key = CacheService::indicator_key(symbol);
 
-        // Check cache
-        if let Some(cached) = CacheService::get(&state.redis, &cache_key).await? {
+        // Check cache (60s TTL)
+        if let Some(cached) = CacheService::get(&state.cache, &cache_key).await? {
             if let Ok(result) = serde_json::from_str(&cached) {
                 return Ok(result);
             }
@@ -144,7 +138,7 @@ impl StockService {
 
         // Cache
         if let Ok(json) = serde_json::to_string(&result) {
-            let _ = CacheService::set(&state.redis, &cache_key, &json).await;
+            let _ = CacheService::set(&state.cache, &cache_key, &json).await;
         }
 
         Ok(result)

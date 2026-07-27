@@ -17,20 +17,7 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: stockpulse-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redisdata:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+
 
   backend:
     build:
@@ -42,7 +29,6 @@ services:
       - "3001:3001"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-stockpulse}:${POSTGRES_PASSWORD:-stockpulse_secret}@db:5432/${POSTGRES_DB:-stockpulse}
-      REDIS_URL: redis://redis:6379
       AI_SERVICE_URL: http://ai-service:8000
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-demo}
       JWT_SECRET: ${JWT_SECRET:-stockpulse-super-secret-jwt-key-change-in-production}
@@ -50,8 +36,6 @@ services:
       BACKEND_PORT: 3001
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
 
   ai-service:
@@ -87,4 +71,3 @@ services:
 
 volumes:
   pgdata:
-  redisdata:

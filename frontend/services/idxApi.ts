@@ -167,6 +167,18 @@ export interface IdxAIRecommendation {
   timeHorizon: string;
 }
 
+// AI-generated narrative for each analysis section, produced by Ollama from the
+// complete stock dataset. Empty strings + `_error` indicate Ollama unavailable.
+export interface IdxAIInsights {
+  summary: string;
+  fundamental: string;
+  fairValue: string;
+  recommendation: string;
+  profile: string;
+  _error?: string;
+  _model?: string;
+}
+
 export const idxApi = {
   search: async (q: string): Promise<IdxSearchResult[]> => {
     const res = await fetch(`/api/idx/search?q=${encodeURIComponent(q)}`);

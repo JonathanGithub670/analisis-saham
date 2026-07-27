@@ -26,12 +26,12 @@ class StockPredictor:
         if os.path.exists(MODEL_PATH):
             try:
                 self.model = joblib.load(MODEL_PATH)
-                print("✅ Loaded existing ML model")
+                print("[OK] Loaded existing ML model")
                 return
             except Exception:
                 pass
 
-        print("🔧 Training new ML model with initial data...")
+        print("[...] Training new ML model with initial data...")
         self._train_initial_model()
 
     def _train_initial_model(self):
@@ -84,11 +84,11 @@ class StockPredictor:
         self.model.fit(X_train, y_train)
 
         accuracy = self.model.score(X_test, y_test)
-        print(f"✅ Model trained — Accuracy: {accuracy:.2%}")
+        print(f"[OK] Model trained — Accuracy: {accuracy:.2%}")
 
         # Save model
         joblib.dump(self.model, MODEL_PATH)
-        print(f"💾 Model saved to {MODEL_PATH}")
+        print(f"[OK] Model saved to {MODEL_PATH}")
 
     def predict(self, symbol: str, rsi: float, macd: float, ma20: float, ma50: float, volume_avg: float) -> dict:
         """Make a prediction for a stock."""

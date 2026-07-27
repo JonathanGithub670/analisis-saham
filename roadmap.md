@@ -44,7 +44,7 @@ Database
 
 Cache
 
-* Redis (price caching & performance)
+* Moka — in-memory cache (zero-latency real-time data)
 
 External APIs
 
@@ -58,7 +58,7 @@ External APIs
 2. Frontend calls Rust API
 3. Rust fetches:
 
-   * Cached data (Redis) OR
+   * Cached data (in-memory) OR
    * External API
 4. Rust calculates indicators
 5. Rust calls AI service (optional)
@@ -75,7 +75,7 @@ External APIs
 * Reqwest (HTTP client)
 * Serde (serialization)
 * SQLx / Diesel (database ORM)
-* Redis client
+* In-memory cache (moka)
 
 ---
 
@@ -491,8 +491,6 @@ services:
     build: ./ai-service
   db:
     image: postgres
-  redis:
-    image: redis
 ```
 
 ---

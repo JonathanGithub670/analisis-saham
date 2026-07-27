@@ -20,176 +20,13 @@ const QUICK_REPLIES = [
   "Layak dibeli?",
   "P/E ratio?",
   "Dividen berapa?",
-  "Siapa CEO-nya?",
+  "Bagaimana fundamentalnya?",
   "Profil perusahaan",
 ];
 
 function fmtRp(v: number | null | undefined): string {
   if (v === null || v === undefined || !isFinite(v)) return "-";
   return `Rp ${v.toLocaleString("id-ID")}`;
-}
-
-function fmtPct(v: number | null | undefined, scale = 100): string {
-  if (v === null || v === undefined || !isFinite(v)) return "-";
-  return `${(v * scale).toFixed(2)}%`;
-}
-
-function fmtNum(v: number | null | undefined): string {
-  if (v === null || v === undefined || !isFinite(v)) return "-";
-  return v.toLocaleString("id-ID");
-}
-
-function generateBotResponse(userText: string, quote: IdxStockQuote): string {
-  const text = userText.toLowerCase();
-  const code = quote.symbol.replace(".JK", "");
-
-  // Harga saat ini
-  if (/\b(harga|price|sekarang|current|now)\b/.test(text)) {
-    const dir = quote.change >= 0 ? "naik" : "turun";
-    const emoji = quote.change >= 0 ? "📈" : "📉";
-    return `${emoji} Harga ${code} saat ini **${fmtRp(quote.price)}**, ${dir} ${Math.abs(quote.changePercent).toFixed(2)}% (${fmtRp(Math.abs(quote.change))}) dari penutupan sebelumnya ${fmtRp(quote.previousClose)}.\n\nOHLC hari ini:\n• Open: ${fmtRp(quote.open)}\n• High: ${fmtRp(quote.high)}\n• Low: ${fmtRp(quote.low)}`;
-  }
-
-  // Rekomendasi / layak beli
-  if (/\b(layak|beli|buy|worth|rekomen|saran|jual|sell)\b/.test(text)) {
-    return `Untuk keputusan jual/beli, silakan lihat tab **Rekomendasi AI** yang menganalisis 10+ indikator teknikal (RSI, MACD, SMA, dll). \n\nDari sisi valuasi fundamental, cek tab **Harga Wajar** untuk melihat apakah ${code} sedang undervalued atau overvalued berdasarkan metode Graham Number, P/E, P/B, dan target analis.\n\nIngat: selalu lakukan riset mandiri sebelum mengambil keputusan investasi.`;
-  }
-
-  // P/E Ratio
-  if (/\b(p\/?e|pe ratio|price earning|earning)\b/.test(text)) {
-    return `📊 **P/E Ratio ${code}:**\n• Trailing P/E: ${quote.trailingPE?.toFixed(2) || "-"}\n• Forward P/E: ${quote.forwardPE?.toFixed(2) || "-"}\n• EPS (TTM): ${quote.epsTrailingTwelveMonths?.toFixed(2) || "-"}\n\nMenurut Benjamin Graham, P/E ≤ 15x umumnya dianggap wajar untuk saham defensif. P/E yang terlalu tinggi bisa berarti saham mahal atau pasar ekspektasi pertumbuhan tinggi.`;
-  }
-
-  // P/B Ratio
-  if (/\b(p\/?b|pb ratio|book value|bvps|buku)\b/.test(text)) {
-    return `📚 **P/B Ratio ${code}:**\n• P/B: ${quote.priceToBook?.toFixed(2) || "-"}\n• Book Value per Share: ${fmtRp(quote.bookValue)}\n\nP/B ≤ 1.5x dianggap wajar menurut Graham. P/B < 1 berarti harga pasar di bawah nilai buku — bisa jadi undervalued, atau sinyal ada masalah fundamental.`;
-  }
-
-  // Dividen
-  if (/\b(dividen|dividend|yield|cuan)\b/.test(text)) {
-    const yieldStr = quote.dividendYieldFmt || fmtPct(quote.dividendYield);
-    return `💰 **Dividend Yield ${code}: ${yieldStr}**\n\n${
-      quote.dividendYield && quote.dividendYield > 0
-        ? `Dengan harga saat ini ${fmtRp(quote.price)}, setiap lembar saham memberikan yield tahunan sekitar ${yieldStr}. ${
-            quote.dividendYield > 0.04
-              ? "Yield ini cukup menarik untuk income investing."
-              : "Yield relatif kecil — saham ini lebih cocok untuk growth investing."
-          }`
-        : "Data dividen tidak tersedia atau perusahaan tidak membagikan dividen."
-    }`;
-  }
-
-  // Market Cap
-  if (/\b(market cap|kapitalisasi|kapital|ukuran)\b/.test(text)) {
-    return `🏦 **Kapitalisasi Pasar ${code}: ${quote.marketCapFmt || fmtRp(quote.marketCap)}**\n\nIni adalah total nilai pasar seluruh saham beredar. Enterprise Value: ${quote.enterpriseValueFmt || fmtRp(quote.enterpriseValue)}.`;
-  }
-
-  // Volume
-  if (/\b(volume|volum|likuid|trading)\b/.test(text)) {
-    return `📊 **Volume Transaksi ${code}:**\n• Hari ini: ${fmtNum(quote.volume)} lembar\n• Rata-rata: ${fmtNum(quote.averageVolume)} lembar\n\n${
-      quote.volume && quote.averageVolume
-        ? quote.volume > quote.averageVolume * 1.5
-          ? "Volume hari ini jauh di atas rata-rata — menunjukkan minat pasar yang tinggi."
-          : quote.volume < quote.averageVolume * 0.5
-            ? "Volume hari ini di bawah rata-rata — minat pasar rendah."
-            : "Volume hari ini normal."
-        : ""
-    }`;
-  }
-
-  // 52 Week
-  if (/\b(52|tahun|yearly|year|setahun|range)\b/.test(text)) {
-    let position = "-";
-    if (quote.fiftyTwoWeekLow && quote.fiftyTwoWeekHigh && quote.price) {
-      const pct =
-        ((quote.price - quote.fiftyTwoWeekLow) /
-          (quote.fiftyTwoWeekHigh - quote.fiftyTwoWeekLow)) *
-        100;
-      position = `${pct.toFixed(1)}% dari low`;
-    }
-    return `📅 **Range 52 Minggu ${code}:**\n• High: ${fmtRp(quote.fiftyTwoWeekHigh)}\n• Low: ${fmtRp(quote.fiftyTwoWeekLow)}\n• Posisi saat ini: ${position}\n\nMA 50 hari: ${fmtRp(quote.fiftyDayAverage)}\nMA 200 hari: ${fmtRp(quote.twoHundredDayAverage)}`;
-  }
-
-  // CEO / Direksi
-  if (/\b(ceo|direksi|direktur|pimpinan|officer|bos|jabat)\b/.test(text)) {
-    const officers = quote.companyOfficers || [];
-    if (officers.length === 0)
-      return `❓ Data direksi untuk ${code} belum tersedia.`;
-    const top = officers.slice(0, 5);
-    return `👥 **Eksekutif Kunci ${code}:**\n\n${top
-      .map((o) => `• **${o.name || "-"}**\n  ${o.title || "-"}${o.age ? ` (usia ${o.age})` : ""}`)
-      .join("\n\n")}`;
-  }
-
-  // Sektor / Industri
-  if (/\b(sektor|sector|industri|industry|bidang|usaha)\b/.test(text)) {
-    return `🏢 **${code} — ${quote.name}**\n\n• Sektor: ${quote.sector || "-"}\n• Industri: ${quote.industry || "-"}\n• Karyawan: ${fmtNum(quote.fullTimeEmployees)} orang\n• Bursa: ${quote.exchange || "IDX"}`;
-  }
-
-  // Profil / tentang
-  if (/\b(profil|tentang|about|company|perusahaan|apa)\b/.test(text)) {
-    if (quote.longBusinessSummary) {
-      const short =
-        quote.longBusinessSummary.length > 400
-          ? quote.longBusinessSummary.slice(0, 400) + "..."
-          : quote.longBusinessSummary;
-      return `📖 **${quote.name} (${code})**\n\n${short}\n\n📍 ${quote.city || "-"}, ${quote.country || "-"}\n🌐 ${quote.website || "-"}`;
-    }
-    return `${quote.name} (${code}) — ${quote.sector || "-"} / ${quote.industry || "-"}, tercatat di ${quote.exchange || "IDX"}.`;
-  }
-
-  // Revenue / Pendapatan
-  if (/\b(pendapatan|revenue|sales|penjualan|omzet)\b/.test(text)) {
-    return `💵 **Pendapatan ${code}:**\n• Total Revenue: ${quote.totalRevenueFmt || fmtRp(quote.totalRevenue)}\n• Revenue Growth: ${fmtPct(quote.revenueGrowth)}\n• EPS Growth (Q): ${fmtPct(quote.earningsQuarterlyGrowth)}\n\n${
-      quote.revenueGrowth && quote.revenueGrowth > 0.1
-        ? "Pertumbuhan pendapatan kuat (>10%) — pertanda perusahaan sedang ekspansi."
-        : quote.revenueGrowth && quote.revenueGrowth < 0
-          ? "Pendapatan sedang turun — perlu dipantau fundamentalnya."
-          : ""
-    }`;
-  }
-
-  // Margin
-  if (/\b(margin|profit|laba|untung)\b/.test(text)) {
-    return `📈 **Margin ${code}:**\n• Gross Margin: ${fmtPct(quote.grossMargins)}\n• Operating Margin: ${fmtPct(quote.operatingMargins)}\n• Profit Margin: ${fmtPct(quote.profitMargins)}\n\nProfit margin tinggi menandakan efisiensi perusahaan dalam mengubah pendapatan menjadi laba bersih.`;
-  }
-
-  // ROE
-  if (/\b(roe|return on equity|ekuitas)\b/.test(text)) {
-    const roe = quote.returnOnEquity;
-    let verdict = "";
-    if (roe !== null && roe !== undefined) {
-      if (roe > 0.2) verdict = " — **Sangat baik** (>20%)";
-      else if (roe > 0.15) verdict = " — **Baik** (>15%)";
-      else if (roe > 0.1) verdict = " — Cukup (>10%)";
-      else if (roe > 0) verdict = " — Rendah";
-      else verdict = " — **Negatif** (perusahaan sedang merugi)";
-    }
-    return `🎯 **ROE ${code}: ${fmtPct(roe)}${verdict}**\n\nReturn on Equity mengukur seberapa efisien perusahaan menghasilkan laba dari modal pemegang saham. ROE > 15% dianggap baik menurut Warren Buffett.`;
-  }
-
-  // Debt / Hutang
-  if (/\b(hutang|debt|utang|liability|kewajiban)\b/.test(text)) {
-    return `⚖️ **Kesehatan Keuangan ${code}:**\n• Debt to Equity: ${quote.debtToEquity?.toFixed(2) || "-"}\n• Current Ratio: ${quote.currentRatio?.toFixed(2) || "-"}\n\nDebt to Equity < 1 umumnya menandakan perusahaan konservatif. Current Ratio > 1 berarti aset lancar cukup untuk membayar kewajiban jangka pendek.`;
-  }
-
-  // Salam
-  if (/\b(halo|hai|hi|hello|selamat|assalam)\b/.test(text)) {
-    return `👋 Halo! Saya asisten AI untuk saham **${code}** (${quote.name}).\n\nTanyakan apa saja — harga, fundamental, valuasi, dividen, CEO, atau profil perusahaan. Harga saat ini: **${fmtRp(quote.price)}** (${quote.change >= 0 ? "+" : ""}${quote.changePercent.toFixed(2)}%)`;
-  }
-
-  // Terima kasih
-  if (/\b(terima kasih|thanks|thank|makasih)\b/.test(text)) {
-    return `Sama-sama! 😊 Jika ada pertanyaan lain tentang ${code}, silakan tanyakan kapan saja.`;
-  }
-
-  // Bantuan
-  if (/\b(bantu|help|bisa apa|fitur|menu)\b/.test(text)) {
-    return `🤖 Saya bisa menjawab pertanyaan tentang **${code}**:\n\n• **Harga** — harga saat ini, OHLC, range 52W\n• **Valuasi** — P/E, P/B, book value, dividen\n• **Fundamental** — revenue, margin, ROE, hutang\n• **Perusahaan** — profil, sektor, CEO, karyawan\n• **Rekomendasi** — saran jual/beli\n\nCoba tanyakan: "Berapa P/E ratio?", "Siapa CEO-nya?", atau "Bagaimana dividennya?"`;
-  }
-
-  // Default fallback
-  return `🤔 Maaf, saya belum memahami pertanyaan "${userText}" dengan baik.\n\nSaya bisa menjawab tentang: **harga, P/E, P/B, dividen, market cap, volume, 52W range, CEO, sektor, profil perusahaan, pendapatan, margin, ROE, hutang**.\n\nContoh: "berapa harga sekarang?", "bagaimana dividennya?", atau ketik **"bantu"** untuk daftar lengkap.`;
 }
 
 // Render message text with basic markdown (**bold**) support
@@ -213,14 +50,14 @@ export default function IdxStockChat({ quote }: Props) {
     {
       id: "welcome",
       role: "bot",
-      text: `👋 Halo! Saya asisten AI untuk **${code}** (${quote.name}).\n\nTanyakan apa saja tentang saham ini. Harga saat ini: **${fmtRp(quote.price)}** (${quote.change >= 0 ? "+" : ""}${quote.changePercent.toFixed(2)}%)`,
+      text: `👋 Halo! Saya asisten AI untuk **${code}** (${quote.name}).\n\nSaya punya akses ke data lengkap saham ini (harga, fundamental, indikator teknikal, estimasi harga wajar). Tanyakan apa saja — jawaban saya berbasis data nyata. Harga saat ini: **${fmtRp(quote.price)}** (${quote.change >= 0 ? "+" : ""}${quote.changePercent.toFixed(2)}%)`,
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
-  const typingRef = useRef(false);
+  const sendingRef = useRef(false);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -230,55 +67,94 @@ export default function IdxStockChat({ quote }: Props) {
 
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!text.trim() || typingRef.current) return;
-      typingRef.current = true;
+      const t = text.trim();
+      if (!t || sendingRef.current) return;
+      sendingRef.current = true;
 
       const userMsg: Message = {
         id: `u-${Date.now()}`,
         role: "user",
-        text: text.trim(),
+        text: t,
         timestamp: new Date(),
       };
+      // Build history from current messages (before adding the new user msg)
+      const history = messages
+        .filter((m) => m.text && !m.text.startsWith("⚠️"))
+        .map((m) => ({ role: m.role, content: m.text }));
+
       setMessages((prev) => [...prev, userMsg]);
       setInput("");
       setIsTyping(true);
 
-      // Simulate thinking delay
-      await new Promise((r) => setTimeout(r, 400 + Math.random() * 400));
-
-      const response = generateBotResponse(text, quote);
-      setIsTyping(false);
-
       const botId = `b-${Date.now()}`;
-      const botMsg: Message = {
-        id: botId,
-        role: "bot",
-        text: "",
-        timestamp: new Date(),
-        typing: true,
-      };
-      setMessages((prev) => [...prev, botMsg]);
+      try {
+        const res = await fetch("/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: t,
+            history,
+            symbol: quote.symbol,
+          }),
+        });
 
-      // Type out response character by character (realtime effect)
-      const speed = response.length > 300 ? 4 : 10;
-      for (let i = 1; i <= response.length; i++) {
-        await new Promise((r) => setTimeout(r, speed));
+        if (!res.ok || !res.body) {
+          let errMsg = `Permintaan gagal (HTTP ${res.status})`;
+          try {
+            const j = await res.json();
+            if (j?.error) errMsg = j.error;
+          } catch {
+            /* ignore */
+          }
+          throw new Error(errMsg);
+        }
+
+        setIsTyping(false);
+        // Insert empty bot message (typing) then stream tokens into it
+        setMessages((prev) => [
+          ...prev,
+          { id: botId, role: "bot", text: "", timestamp: new Date(), typing: true },
+        ]);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let acc = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          acc += decoder.decode(value, { stream: true });
+          const snapshot = acc;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === botId ? { ...m, text: snapshot, typing: true } : m
+            )
+          );
+        }
         setMessages((prev) =>
           prev.map((m) =>
             m.id === botId
-              ? {
-                  ...m,
-                  text: response.slice(0, i),
-                  typing: i < response.length,
-                }
+              ? { ...m, text: acc || "(tidak ada respons dari AI)", typing: false }
               : m
           )
         );
+      } catch (err) {
+        setIsTyping(false);
+        const msg = err instanceof Error ? err.message : "Gagal menghubungi AI";
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: botId,
+            role: "bot",
+            text: `⚠️ ${msg}`,
+            timestamp: new Date(),
+            typing: false,
+          },
+        ]);
+      } finally {
+        sendingRef.current = false;
       }
-
-      typingRef.current = false;
     },
-    [quote]
+    [messages, quote.symbol]
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -322,7 +198,7 @@ export default function IdxStockChat({ quote }: Props) {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success-500" />
             </span>
-            Online • Real-time data
+            Online · powered by Ollama
           </p>
         </div>
         <div className="text-right flex-shrink-0">
@@ -378,6 +254,8 @@ export default function IdxStockChat({ quote }: Props) {
                 className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-line leading-relaxed ${
                   msg.role === "user"
                     ? "bg-brand-500 text-white rounded-br-md"
+                    : msg.text.startsWith("⚠️")
+                    ? "bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300 border border-warning-200 dark:border-warning-500/30 rounded-bl-md"
                     : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100 rounded-bl-md"
                 }`}
               >
@@ -406,7 +284,7 @@ export default function IdxStockChat({ quote }: Props) {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09z"
+                  d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
                 />
               </svg>
             </div>

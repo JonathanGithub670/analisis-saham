@@ -1,5 +1,5 @@
 use axum::{
-    routing::{get, patch, post},
+    routing::{get, patch, post, delete},
     Router,
 };
 
@@ -14,6 +14,11 @@ pub fn api_routes() -> Router<AppState> {
         .route("/auth/refresh", post(auth_controller::refresh))
         .route("/auth/logout", post(auth_controller::logout))
         .route("/auth/me", get(auth_controller::me))
+        // API Key management (user's own AI provider keys)
+        .route("/auth/api-keys", post(api_key_controller::save_api_key))
+        .route("/auth/api-keys", get(api_key_controller::list_api_keys))
+        .route("/auth/api-keys/verify", post(api_key_controller::verify_api_key))
+        .route("/auth/api-keys/{id}", delete(api_key_controller::delete_api_key))
         // Stock routes
         .route("/stocks/search", get(stock_controller::search_stocks))
         .route("/stocks/{symbol}", get(stock_controller::get_stock))
@@ -29,6 +34,9 @@ pub fn api_routes() -> Router<AppState> {
         .route("/notifications", get(notification_controller::get_notifications))
         .route("/notifications/alerts", post(notification_controller::create_price_alert))
         .route("/notifications/{id}/read", patch(notification_controller::mark_notification_read))
+
+        // AI Chat (uses user's stored API keys)
+        .route("/ai/chat", post(chat_controller::chat))
 
         // Health check
         .route("/health", get(health_check))

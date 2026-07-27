@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { idxApi, type IdxAIRecommendation } from "@/services/idxApi";
+import AIInsightCard from "@/components/common/AIInsightCard";
 
 interface Props {
   symbol: string;
   currentPrice?: number;
+  section?: "recommendation";
 }
 
 function formatRupiah(value: number | null) {
@@ -267,7 +269,11 @@ function generatePortfolioAdvice(
 // Main Component
 // ============================================================
 
-export default function IdxAIRecommendationPanel({ symbol, currentPrice }: Props) {
+export default function IdxAIRecommendationPanel({
+  symbol,
+  currentPrice,
+  section,
+}: Props) {
   const [analysis, setAnalysis] = useState<IdxAIRecommendation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -422,6 +428,13 @@ export default function IdxAIRecommendationPanel({ symbol, currentPrice }: Props
           </span>
         </div>
       </div>
+
+      {/* AI narrative — integrated recommendation interpreting the data */}
+      <AIInsightCard
+        title="Narasi Rekomendasi AI"
+        symbol={symbol}
+        section={section}
+      />
 
       {/* ============================================================ */}
       {/* Portfolio Position Advisor */}

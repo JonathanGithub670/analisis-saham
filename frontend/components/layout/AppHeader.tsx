@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useAuth } from "@/contexts/AuthContext";
+import ApiKeyManager from "@/components/common/ApiKeyManager";
 
 export default function AppHeader() {
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const { user, logout } = useAuth();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [hasPro, setHasPro] = useState(false);
 
   const handleToggle = () => {
     if (typeof window !== "undefined" && window.innerWidth >= 1024) {
@@ -24,6 +26,29 @@ export default function AppHeader() {
     await logout();
     router.push("/login");
   };
+
+  const checkProStatus = useCallback(() => {
+    import("@/services/api").then(({ api }) => {
+      api.listApiKeys().then((res) => {
+        setHasPro(res.data.some((k) => k.is_valid));
+      }).catch(() => {
+        setHasPro(false);
+      });
+    });
+  }, []);
+
+  // Check Pro status on mount and when user changes
+  useEffect(() => {
+    if (user) {
+      checkProStatus();
+    } else {
+      setHasPro(false);
+    }
+  }, [user, checkProStatus]);
+
+  const handleKeysChanged = useCallback(() => {
+    checkProStatus();
+  }, [checkProStatus]);
 
   return (
     <header className="sticky top-0 flex w-full bg-white border-gray-200 z-[99999] dark:border-gray-800 dark:bg-gray-900 lg:border-b">
@@ -51,8 +76,22 @@ export default function AppHeader() {
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center text-gray-700 dark:text-gray-400"
             >
-              <span className="flex items-center justify-center w-10 h-10 mr-3 overflow-hidden rounded-full bg-brand-500 text-white font-semibold text-sm">
-                {user.username.charAt(0).toUpperCase()}
+              <span className="relative mr-3 inline-flex">
+                <span className="flex items-center justify-center w-10 h-10 overflow-hidden rounded-full bg-brand-500 text-white font-semibold text-sm">
+                  {user.username.charAt(0).toUpperCase()}
+                </span>
+                {hasPro && (
+                  <span
+                    className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 px-1.5 py-[2px] rounded-full text-[7px] font-extrabold tracking-wider text-white leading-none z-10"
+                    style={{
+                      background: "linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7)",
+                      letterSpacing: "0.08em",
+                      boxShadow: "0 0 0 2px rgba(17, 24, 39, 1), 0 2px 6px rgba(99, 102, 241, 0.4)",
+                    }}
+                  >
+                    PRO
+                  </span>
+                )}
               </span>
               <span className="hidden sm:block mr-1 font-medium text-sm">{user.username}</span>
               <svg
@@ -66,11 +105,15 @@ export default function AppHeader() {
             {dropdownOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                <div className="absolute right-0 mt-4 flex w-[260px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-800 dark:bg-gray-900 z-50">
+                <div className="absolute right-0 mt-4 flex w-[300px] flex-col rounded-2xl border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-800 dark:bg-gray-900 z-50">
                   <div className="pb-3 border-b border-gray-200 dark:border-gray-800">
                     <span className="block font-medium text-gray-700 text-sm dark:text-gray-300">{user.username}</span>
                     <span className="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">{user.email}</span>
                   </div>
+
+                  {/* AI API Key Manager — above Sign Out */}
+                  <ApiKeyManager onKeysChanged={handleKeysChanged} />
+
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-3 px-3 py-2 mt-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"

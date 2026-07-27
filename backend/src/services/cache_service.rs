@@ -1,35 +1,47 @@
 use crate::error::AppResult;
-use redis::AsyncCommands;
 
-const DEFAULT_TTL: u64 = 300; // 5 minutes
-const HISTORY_TTL: u64 = 3600; // 1 hour for historical data
-
+/// In-memory cache service powered by `moka`.
+/// Provides zero-latency caching without external infrastructure.
+///
+/// Two cache tiers:
+///   - `cache`: 60s TTL for quotes, search, indicators (real-time freshness)
+///   - `history_cache`: 1h TTL for historical OHLCV data (rarely changes)
 pub struct CacheService;
 
 impl CacheService {
-    /// Get cached value by key
-    pub async fn get(redis: &redis::Client, key: &str) -> AppResult<Option<String>> {
-        let mut conn = redis.get_multiplexed_async_connection().await?;
-        let value: Option<String> = conn.get(key).await?;
-        Ok(value)
+    /// Get cached value by key (from standard cache)
+    pub async fn get(
+        cache: &moka::future::Cache<String, String>,
+        key: &str,
+    ) -> AppResult<Option<String>> {
+        Ok(cache.get(key).await)
     }
 
-    /// Set cached value with default TTL (5 min)
-    pub async fn set(redis: &redis::Client, key: &str, value: &str) -> AppResult<()> {
-        let mut conn = redis.get_multiplexed_async_connection().await?;
-        conn.set_ex::<_, _, ()>(key, value, DEFAULT_TTL).await?;
+    /// Get cached value from history cache (longer TTL)
+    pub async fn get_history(
+        cache: &moka::future::Cache<String, String>,
+        key: &str,
+    ) -> AppResult<Option<String>> {
+        Ok(cache.get(key).await)
+    }
+
+    /// Set cached value in standard cache (60s TTL)
+    pub async fn set(
+        cache: &moka::future::Cache<String, String>,
+        key: &str,
+        value: &str,
+    ) -> AppResult<()> {
+        cache.insert(key.to_string(), value.to_string()).await;
         Ok(())
     }
 
-    /// Set cached value with custom TTL
-    pub async fn set_with_ttl(
-        redis: &redis::Client,
+    /// Set cached value in history cache (1h TTL)
+    pub async fn set_history(
+        cache: &moka::future::Cache<String, String>,
         key: &str,
         value: &str,
-        ttl_secs: u64,
     ) -> AppResult<()> {
-        let mut conn = redis.get_multiplexed_async_connection().await?;
-        conn.set_ex::<_, _, ()>(key, value, ttl_secs).await?;
+        cache.insert(key.to_string(), value.to_string()).await;
         Ok(())
     }
 
@@ -53,16 +65,31 @@ impl CacheService {
         format!("stockpulse:indicators:{}", symbol.to_uppercase())
     }
 
-    /// History-specific TTL
-    pub fn history_ttl() -> u64 {
-        HISTORY_TTL
+    /// Invalidate cached entries for a symbol (e.g. after data refresh)
+    #[allow(dead_code)]
+    pub async fn invalidate_symbol(
+        cache: &moka::future::Cache<String, String>,
+        history_cache: &moka::future::Cache<String, String>,
+        symbol: &str,
+    ) {
+        let sym = symbol.to_uppercase();
+        cache.invalidate(&Self::quote_key(&sym)).await;
+        cache.invalidate(&Self::search_key(&sym)).await;
+        cache.invalidate(&Self::indicator_key(&sym)).await;
+        history_cache.invalidate(&Self::history_key(&sym, "1d")).await;
     }
 
-    /// Delete a cached key
+    /// Clear all caches (useful for testing or forced refresh)
     #[allow(dead_code)]
-    pub async fn delete(redis: &redis::Client, key: &str) -> AppResult<()> {
-        let mut conn = redis.get_multiplexed_async_connection().await?;
-        conn.del::<_, ()>(key).await?;
+    pub async fn clear_all(
+        cache: &moka::future::Cache<String, String>,
+        history_cache: &moka::future::Cache<String, String>,
+    ) -> AppResult<()> {
+        cache.invalidate_all();
+        history_cache.invalidate_all();
+        // Ensure invalidation is processed
+        cache.run_pending_tasks().await;
+        history_cache.run_pending_tasks().await;
         Ok(())
     }
 }

@@ -131,3 +131,29 @@ export interface RegisterRequest {
   username: string;
   password: string;
 }
+
+// API Key management types — platform is auto-detected from the key
+export interface UserApiKey {
+  id: string;
+  provider: string;
+  is_valid: boolean;
+  /** Optional model override for chat (e.g. "glm-5.2"). */
+  model?: string | null;
+  verified_at: string | null;
+  created_at: string;
+  /** Why verification succeeded/failed (only present on save/verify responses). */
+  verify_detail?: string;
+}
+
+export interface SaveApiKeyRequest {
+  api_key: string;
+  /** Optional model override for chat (e.g. "glm-5.2"). */
+  model?: string;
+}
+
+export interface VerifyApiKeyResponse {
+  provider: string;
+  is_valid: boolean;
+  verified_at: string | null;
+  detail?: string;
+}

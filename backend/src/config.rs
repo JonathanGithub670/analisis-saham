@@ -3,7 +3,6 @@
 #[derive(Clone, Debug)]
 pub struct Config {
     pub database_url: String,
-    pub redis_url: String,
     pub alpha_vantage_api_key: String,
     pub ai_service_url: String,
     pub backend_host: String,
@@ -12,6 +11,11 @@ pub struct Config {
     pub jwt_secret: String,
     pub jwt_access_expiry_secs: u64,
     pub jwt_refresh_expiry_secs: u64,
+    pub api_key_encryption_key: String,
+    // Server-configured AI (single provider/key/model for the whole app).
+    pub ai_provider: String,
+    pub ai_api_key: String,
+    pub ai_model: String,
 }
 
 impl Config {
@@ -19,8 +23,6 @@ impl Config {
         Self {
             database_url: std::env::var("DATABASE_URL")
                 .expect("DATABASE_URL must be set"),
-            redis_url: std::env::var("REDIS_URL")
-                .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
             alpha_vantage_api_key: std::env::var("ALPHA_VANTAGE_API_KEY")
                 .expect("ALPHA_VANTAGE_API_KEY must be set"),
             ai_service_url: std::env::var("AI_SERVICE_URL")
@@ -41,6 +43,16 @@ impl Config {
                 .unwrap_or_else(|_| "604800".to_string())
                 .parse()
                 .expect("JWT_REFRESH_EXPIRY_SECS must be a valid u64"),
+            api_key_encryption_key: std::env::var("API_KEY_ENCRYPTION_KEY")
+                .unwrap_or_else(|_| "stockpulse-default-api-key-encryption-key".to_string()),
+            // AI provider used by /api/ai/chat. One of: claude, chatgpt, gemini,
+            // deepseek, groq, glm. Defaults to glm (Zhipu).
+            ai_provider: std::env::var("AI_PROVIDER")
+                .unwrap_or_else(|_| "glm".to_string()),
+            // The raw API key (e.g. Zhipu "id.secret"). Empty → chat returns an error.
+            ai_api_key: std::env::var("AI_API_KEY").unwrap_or_default(),
+            // Model name, e.g. glm-5.2, gpt-4o-mini. Empty → provider default.
+            ai_model: std::env::var("AI_MODEL").unwrap_or_default(),
         }
     }
 }

@@ -33,3 +33,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Backend build artifact (Next dev trace)
+backend/.next/

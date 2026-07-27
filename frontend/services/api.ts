@@ -2,7 +2,9 @@
 // StockPulse — API Service
 // ============================================================
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+// In dev: relative URL → Next.js rewrites proxy to backend (no CORS issues)
+// In prod: NEXT_PUBLIC_API_URL points to absolute backend URL
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -77,6 +79,9 @@ import type {
   RegisterRequest,
   AuthUser,
   TokenResponse,
+  UserApiKey,
+  SaveApiKeyRequest,
+  VerifyApiKeyResponse,
 } from "@/types";
 
 export const api = {
@@ -140,4 +145,17 @@ export const api = {
 
   removeFromWatchlist: (symbol: string) =>
     deleteApi(`/api/watchlist/${symbol}`, true),
+
+  // API Keys (user AI provider keys)
+  listApiKeys: () =>
+    fetchApi<{ data: UserApiKey[] }>("/api/auth/api-keys", true),
+
+  saveApiKey: (data: SaveApiKeyRequest) =>
+    postApi<{ message: string; data: UserApiKey }>("/api/auth/api-keys", data, true),
+
+  verifyApiKey: (keyId: string) =>
+    postApi<VerifyApiKeyResponse>("/api/auth/api-keys/verify", { id: keyId }, true),
+
+  deleteApiKey: (keyId: string) =>
+    deleteApi<{ message: string }>(`/api/auth/api-keys/${keyId}`, true),
 };

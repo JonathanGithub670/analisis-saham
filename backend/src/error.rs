@@ -29,8 +29,8 @@ pub enum AppError {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
-    #[error("Redis error: {0}")]
-    Redis(#[from] redis::RedisError),
+    #[error("Cache error: {0}")]
+    Cache(String),
 
     #[error("HTTP client error: {0}")]
     HttpClient(#[from] reqwest::Error),
@@ -56,8 +56,8 @@ impl IntoResponse for AppError {
                 tracing::error!("Database error: {:?}", e);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
             }
-            AppError::Redis(e) => {
-                tracing::error!("Redis error: {:?}", e);
+            AppError::Cache(e) => {
+                tracing::error!("Cache error: {:?}", e);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Cache error".to_string())
             }
             AppError::HttpClient(e) => {
